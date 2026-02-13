@@ -25,9 +25,14 @@ router.post("/api/jobs", async (req: Request, res: Response) => {
       [id, type, JSON.stringify(jobPayload)]
     );
 
-    // Add to BullMQ queue
+    // Add to BullMQ queue; if this fails, clean up the orphaned DB row
     const queue = getQueue();
-    await queue.add(type, { jobId: id, ...jobPayload }, { jobId: id });
+    try {
+      await queue.add(type, { jobId: id, ...jobPayload }, { jobId: id });
+    } catch (queueErr) {
+      await pool.query("DELETE FROM jobs WHERE id = $1", [id]);
+      throw queueErr;
+    }
 
     res.status(201).json({
       id,
