@@ -2,6 +2,7 @@ import { Worker, QueueEvents } from "bullmq";
 import { Pool } from "pg";
 import { config } from "./config";
 import { createProcessor, JobData } from "./processor";
+import { markJobFailed, getJob } from "./db";
 
 export interface WorkerInstance {
   worker: Worker<JobData>;
@@ -36,8 +37,18 @@ export function createWorker(
     console.log(`Job ${job.id} completed`);
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", async (job, err) => {
     console.error(`Job ${job?.id} failed:`, err.message);
+    if (job?.data?.jobId) {
+      try {
+        const existing = await getJob(pool, job.data.jobId);
+        if (existing && existing.status !== "failed") {
+          await markJobFailed(pool, job.data.jobId, err.message);
+        }
+      } catch (dbErr) {
+        console.error(`Failed to update job ${job.data.jobId} status in DB:`, dbErr);
+      }
+    }
   });
 
   worker.on("error", (err) => {

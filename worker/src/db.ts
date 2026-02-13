@@ -26,10 +26,13 @@ export interface JobRow {
 }
 
 export async function markJobRunning(pool: Pool, jobId: string): Promise<void> {
-  await pool.query(
+  const res = await pool.query(
     `UPDATE jobs SET status = 'running', started_at = NOW(), updated_at = NOW() WHERE id = $1`,
     [jobId]
   );
+  if (res.rowCount === 0) {
+    console.warn(`markJobRunning: job ${jobId} not found in database`);
+  }
 }
 
 export async function markJobCompleted(
@@ -37,10 +40,13 @@ export async function markJobCompleted(
   jobId: string,
   result: Record<string, unknown>
 ): Promise<void> {
-  await pool.query(
+  const res = await pool.query(
     `UPDATE jobs SET status = 'completed', result = $1, completed_at = NOW(), updated_at = NOW() WHERE id = $2`,
     [JSON.stringify(result), jobId]
   );
+  if (res.rowCount === 0) {
+    console.warn(`markJobCompleted: job ${jobId} not found in database`);
+  }
 }
 
 export async function markJobFailed(
@@ -48,10 +54,13 @@ export async function markJobFailed(
   jobId: string,
   error: string
 ): Promise<void> {
-  await pool.query(
+  const res = await pool.query(
     `UPDATE jobs SET status = 'failed', error = $1, completed_at = NOW(), updated_at = NOW() WHERE id = $2`,
     [error, jobId]
   );
+  if (res.rowCount === 0) {
+    console.warn(`markJobFailed: job ${jobId} not found in database`);
+  }
 }
 
 export async function getJob(

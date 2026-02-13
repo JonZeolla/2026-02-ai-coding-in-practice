@@ -14,9 +14,14 @@ async function main() {
 
   const handleSignal = async (signal: string) => {
     console.log(`\nReceived ${signal}, shutting down gracefully...`);
-    await shutdown();
-    await pool.end();
-    process.exit(0);
+    try {
+      await shutdown();
+      await pool.end();
+      process.exit(0);
+    } catch (err) {
+      console.error("Error during shutdown:", err);
+      process.exit(1);
+    }
   };
 
   process.on("SIGINT", () => handleSignal("SIGINT"));

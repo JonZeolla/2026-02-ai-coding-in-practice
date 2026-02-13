@@ -51,16 +51,27 @@ export function createProcessor(pool: Pool, delayMs?: number) {
   return async function processJob(job: Job<JobData>): Promise<void> {
     const { jobId, type, payload } = job.data;
 
-    // Mark as running in PostgreSQL
-    await markJobRunning(pool, jobId);
+    try {
+      // Mark as running in PostgreSQL
+      await markJobRunning(pool, jobId);
 
-    // Process the job
-    const result = await simulateWork(type, payload, delayMs);
+      // Process the job
+      const result = await simulateWork(type, payload, delayMs);
 
-    if (result.success) {
-      await markJobCompleted(pool, jobId, result.data!);
-    } else {
-      await markJobFailed(pool, jobId, result.error!);
+      if (result.success) {
+        await markJobCompleted(pool, jobId, result.data!);
+      } else {
+        await markJobFailed(pool, jobId, result.error!);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`Unhandled error processing job ${jobId}:`, message);
+      try {
+        await markJobFailed(pool, jobId, message);
+      } catch (dbErr) {
+        console.error(`Failed to mark job ${jobId} as failed in DB:`, dbErr);
+      }
+      throw err;
     }
   };
 }
