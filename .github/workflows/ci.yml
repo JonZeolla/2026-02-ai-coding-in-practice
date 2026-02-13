@@ -7,39 +7,55 @@ on:
 jobs:
   api-test:
     name: API Tests
-    if: hashFiles('api/package.json') != ''
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: api
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if api exists
+        id: check
+        run: echo "exists=$(test -f api/package.json && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
         with:
           node-version: 20
 
-      - run: npm install
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        working-directory: api
+        run: npm install
 
-      - run: npm test
+      - name: Run tests
+        if: steps.check.outputs.exists == 'true'
+        working-directory: api
+        run: npm test
 
   ui-build:
     name: UI Build & Test
-    if: hashFiles('ui/package.json') != ''
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ui
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if ui exists
+        id: check
+        run: echo "exists=$(test -f ui/package.json && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
         with:
           node-version: 20
 
-      - run: npm install
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ui
+        run: npm install
 
-      - run: npm run build
+      - name: Build
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ui
+        run: npm run build
 
       - name: Run tests
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ui
         run: npm test --if-present
