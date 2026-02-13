@@ -1,12 +1,9 @@
-import { Pool, PoolConfig } from "pg";
+import { Pool } from "pg";
 import { config } from "./config";
 
-let pool: Pool;
+let pool: Pool = new Pool(config.database);
 
-export function getPool(overrideConfig?: PoolConfig): Pool {
-  if (!pool) {
-    pool = new Pool(overrideConfig || config.database);
-  }
+export function getPool(): Pool {
   return pool;
 }
 

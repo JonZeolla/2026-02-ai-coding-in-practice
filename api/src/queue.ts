@@ -1,14 +1,11 @@
 import { Queue } from "bullmq";
 import { config } from "./config";
 
-let jobQueue: Queue;
+let jobQueue: Queue = new Queue("jobs", {
+  connection: config.redis,
+});
 
-export function getQueue(connection?: { host: string; port: number }): Queue {
-  if (!jobQueue) {
-    jobQueue = new Queue("jobs", {
-      connection: connection || config.redis,
-    });
-  }
+export function getQueue(): Queue {
   return jobQueue;
 }
 
