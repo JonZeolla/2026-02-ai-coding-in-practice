@@ -1,0 +1,6 @@
+cspell
+eslint
+lychee
+ruff
+pyproject
+tsconfig
