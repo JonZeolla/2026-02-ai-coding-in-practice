@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Python files
+        id: check
+        run: |
+          if find . -name '*.py' -not -path './node_modules/*' | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No Python files found, skipping lint"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.exists == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        if: steps.check.outputs.exists == 'true'
+        run: pip install ruff
+
+      - name: Ruff check
+        if: steps.check.outputs.exists == 'true'
+        run: ruff check .
+
+      - name: Ruff format check
+        if: steps.check.outputs.exists == 'true'
+        run: ruff format --check .
+
+  typescript-lint:
+    name: TypeScript Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for TypeScript files
+        id: check
+        run: |
+          if find . -name '*.ts' -o -name '*.tsx' | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No TypeScript files found, skipping lint"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
+        with:
+          node-version: 20
+
+      - name: Install eslint
+        if: steps.check.outputs.exists == 'true'
+        run: npm install eslint @eslint/js typescript-eslint
+
+      - name: Run eslint
+        if: steps.check.outputs.exists == 'true'
+        run: npx eslint '**/*.{ts,tsx}'
+
+  spell-check:
+    name: Spell Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install cspell
+        run: npm install -g cspell
+
+      - name: Run cspell
+        run: cspell lint --no-progress "**/*.{md,ts,tsx,py,yml,yaml,json}"
+
+  link-check:
+    name: Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            '**/*.md'
+          fail: true
