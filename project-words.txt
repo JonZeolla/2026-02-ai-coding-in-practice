@@ -1,3 +1,4 @@
+anthropic
 bullmq
 cspell
 eslint
@@ -6,6 +7,9 @@ hostnames
 jobqueue
 lychee
 myapp
+mydb
+mypass
+myuser
 pyproject
 ruff
 shellcheck

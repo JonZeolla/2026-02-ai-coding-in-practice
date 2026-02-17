@@ -1,129 +1,123 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { simulateWork, createProcessor, JobData } from "../processor";
+import { createProcessor, registerHandler, getHandler, JobData } from "../processor";
 import { Job } from "bullmq";
 
-// Mock the db module
 vi.mock("../db", () => ({
   markJobRunning: vi.fn().mockResolvedValue(undefined),
   markJobCompleted: vi.fn().mockResolvedValue(undefined),
   markJobFailed: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../handlers/rubric", () => ({
+  handleRubricGenerate: vi.fn().mockResolvedValue({
+    success: true,
+    data: { assessmentId: "test", rubric: {}, generatedAt: "2026-01-01" },
+  }),
+}));
+
 import { markJobRunning, markJobCompleted, markJobFailed } from "../db";
 
-describe("simulateWork", () => {
-  it("should return success for normal job types", async () => {
-    const result = await simulateWork("email.send", { to: "user@test.com" }, 10);
-
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
-    expect(result.data!.inputType).toBe("email.send");
-    expect(result.data!.summary).toContain("email.send");
-    expect(result.data!.processedAt).toBeDefined();
-  });
-
-  it("should return failure for 'fail' job type", async () => {
-    const result = await simulateWork("fail", {}, 10);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain("Simulated failure");
-    expect(result.error).toContain("fail");
-  });
-
-  it("should return failure when payload.shouldFail is true", async () => {
-    const result = await simulateWork("email.send", { shouldFail: true }, 10);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBeDefined();
-  });
-
-  it("should respect the delay parameter", async () => {
-    const start = Date.now();
-    await simulateWork("test", {}, 100);
-    const elapsed = Date.now() - start;
-
-    expect(elapsed).toBeGreaterThanOrEqual(90);
-  });
-
-  it("should use default delay when none specified", async () => {
-    const start = Date.now();
-    await simulateWork("test", {}, 10);
-    const elapsed = Date.now() - start;
-
-    expect(elapsed).toBeGreaterThanOrEqual(5);
-  });
-});
-
 describe("createProcessor", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mockPool = {} as any;
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should mark job as running, then completed on success", async () => {
-    const processor = createProcessor(mockPool, 10);
+  it("should dispatch rubric.generate to the rubric handler", async () => {
+    const processor = createProcessor(mockPool);
     const mockJob = {
       data: {
-        jobId: "test-uuid-123",
-        type: "email.send",
-        payload: { to: "user@test.com" },
+        jobId: "test-uuid-1",
+        type: "rubric.generate",
+        payload: { assessmentId: "assess-123" },
       },
+      name: "rubric.generate",
     } as Job<JobData>;
 
     await processor(mockJob);
 
-    expect(markJobRunning).toHaveBeenCalledWith(mockPool, "test-uuid-123");
+    expect(markJobRunning).toHaveBeenCalledWith(mockPool, "test-uuid-1");
     expect(markJobCompleted).toHaveBeenCalledWith(
       mockPool,
-      "test-uuid-123",
-      expect.objectContaining({
-        inputType: "email.send",
-        summary: expect.stringContaining("email.send"),
-      })
+      "test-uuid-1",
+      expect.objectContaining({ assessmentId: "test" })
     );
     expect(markJobFailed).not.toHaveBeenCalled();
   });
 
-  it("should mark job as running, then failed on failure", async () => {
-    const processor = createProcessor(mockPool, 10);
+  it("should fail for unknown job types", async () => {
+    const processor = createProcessor(mockPool);
     const mockJob = {
       data: {
-        jobId: "test-uuid-456",
-        type: "fail",
+        jobId: "test-uuid-2",
+        type: "unknown.type",
         payload: {},
       },
+      name: "unknown.type",
     } as Job<JobData>;
 
     await processor(mockJob);
 
-    expect(markJobRunning).toHaveBeenCalledWith(mockPool, "test-uuid-456");
+    expect(markJobRunning).toHaveBeenCalledWith(mockPool, "test-uuid-2");
     expect(markJobFailed).toHaveBeenCalledWith(
       mockPool,
-      "test-uuid-456",
-      expect.stringContaining("Simulated failure")
+      "test-uuid-2",
+      expect.stringContaining("No handler registered")
     );
     expect(markJobCompleted).not.toHaveBeenCalled();
   });
 
-  it("should mark job as failed when payload indicates failure", async () => {
-    const processor = createProcessor(mockPool, 10);
+  it("should use job.name as fallback when job.data.type is missing", async () => {
+    const processor = createProcessor(mockPool);
     const mockJob = {
       data: {
-        jobId: "test-uuid-789",
-        type: "report.generate",
-        payload: { shouldFail: true },
+        jobId: "test-uuid-3",
+        payload: { assessmentId: "assess-456" },
       },
-    } as Job<JobData>;
+      name: "rubric.generate",
+    } as unknown as Job<JobData>;
 
     await processor(mockJob);
 
-    expect(markJobRunning).toHaveBeenCalledWith(mockPool, "test-uuid-789");
+    expect(markJobRunning).toHaveBeenCalledWith(mockPool, "test-uuid-3");
+    expect(markJobCompleted).toHaveBeenCalled();
+  });
+
+  it("should handle unhandled errors and mark job as failed", async () => {
+    const errorHandler = vi.fn().mockRejectedValue(new Error("Handler crash"));
+    registerHandler("crash.test", errorHandler);
+
+    const processor = createProcessor(mockPool);
+    const mockJob = {
+      data: {
+        jobId: "test-uuid-4",
+        type: "crash.test",
+        payload: {},
+      },
+      name: "crash.test",
+    } as Job<JobData>;
+
+    await expect(processor(mockJob)).rejects.toThrow("Handler crash");
+
+    expect(markJobRunning).toHaveBeenCalledWith(mockPool, "test-uuid-4");
     expect(markJobFailed).toHaveBeenCalledWith(
       mockPool,
-      "test-uuid-789",
-      expect.any(String)
+      "test-uuid-4",
+      "Handler crash"
     );
-    expect(markJobCompleted).not.toHaveBeenCalled();
+  });
+});
+
+describe("registerHandler / getHandler", () => {
+  it("should register and retrieve a handler", () => {
+    const handler = vi.fn();
+    registerHandler("test.handler", handler);
+    expect(getHandler("test.handler")).toBe(handler);
+  });
+
+  it("should return undefined for unregistered type", () => {
+    expect(getHandler("nonexistent.type")).toBeUndefined();
   });
 });

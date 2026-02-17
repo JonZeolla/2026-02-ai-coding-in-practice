@@ -14,4 +14,8 @@ export const config = {
     concurrency: parseInt(process.env.WORKER_CONCURRENCY || "5", 10),
     queueName: process.env.QUEUE_NAME || "jobs",
   },
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || "",
+    model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
+  },
 };

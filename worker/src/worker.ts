@@ -13,10 +13,10 @@ export interface WorkerInstance {
 
 export function createWorker(
   pool: Pool,
-  options?: { concurrency?: number; delayMs?: number }
+  options?: { concurrency?: number }
 ): WorkerInstance {
   const concurrency = options?.concurrency ?? config.worker.concurrency;
-  const processor = createProcessor(pool, options?.delayMs);
+  const processor = createProcessor(pool);
 
   const worker = new Worker<JobData>(config.worker.queueName, processor, {
     connection: {
