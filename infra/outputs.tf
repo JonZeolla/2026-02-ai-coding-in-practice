@@ -46,12 +46,21 @@ output "ecs_service_name" {
 }
 
 ############################
-# DNS
+# DNS / Access
 ############################
 
 output "service_url" {
-  description = "HTTPS URL for the service"
-  value       = "https://${var.domain_name}"
+  description = "URL for the service"
+  value       = local.has_custom_domain ? "https://${var.domain_name}" : "http://${aws_lb.main.dns_name}"
+}
+
+############################
+# ECR
+############################
+
+output "ecr_repository_url" {
+  description = "URL of the ECR repository"
+  value       = aws_ecr_repository.main.repository_url
 }
 
 ############################

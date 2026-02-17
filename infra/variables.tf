@@ -90,17 +90,19 @@ variable "environment_variables" {
 }
 
 ############################
-# DNS / TLS
+# DNS / TLS (optional)
 ############################
 
 variable "domain_name" {
-  description = "Fully qualified domain name for the service"
+  description = "Fully qualified domain name for the service (leave empty to use ALB DNS directly)"
   type        = string
+  default     = ""
 }
 
 variable "hosted_zone_id" {
-  description = "Route53 hosted zone ID for the domain"
+  description = "Route53 hosted zone ID for the domain (required if domain_name is set)"
   type        = string
+  default     = ""
 }
 
 ############################

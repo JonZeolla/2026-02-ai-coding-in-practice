@@ -40,14 +40,16 @@ resource "aws_lb_target_group" "main" {
 }
 
 ############################
-# HTTPS Listener (443)
+# HTTPS Listener (443) - only when custom domain is configured
 ############################
 
 resource "aws_lb_listener" "https" {
+  count = local.has_custom_domain ? 1 : 0
+
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"
-  certificate_arn   = aws_acm_certificate_validation.main.certificate_arn
+  certificate_arn   = aws_acm_certificate_validation.main[0].certificate_arn
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
 
   default_action {
@@ -57,24 +59,31 @@ resource "aws_lb_listener" "https" {
 }
 
 ############################
-# HTTP Listener (80) - Redirect to HTTPS
+# HTTP Listener (80)
+# When domain is set: redirects to HTTPS
+# When no domain: forwards traffic directly
 ############################
 
-resource "aws_lb_listener" "http_redirect" {
+resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type = "redirect"
+    type = local.has_custom_domain ? "redirect" : "forward"
 
-    redirect {
-      protocol    = "HTTPS"
-      port        = "443"
-      host        = "#{host}"
-      path        = "/#{path}"
-      query       = "#{query}"
-      status_code = "HTTP_301"
+    dynamic "redirect" {
+      for_each = local.has_custom_domain ? [1] : []
+      content {
+        protocol    = "HTTPS"
+        port        = "443"
+        host        = "#{host}"
+        path        = "/#{path}"
+        query       = "#{query}"
+        status_code = "HTTP_301"
+      }
     }
+
+    target_group_arn = local.has_custom_domain ? null : aws_lb_target_group.main.arn
   }
 }

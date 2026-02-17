@@ -94,7 +94,7 @@ resource "aws_ecs_service" "main" {
 
   health_check_grace_period_seconds = 30
 
-  depends_on = [aws_lb_listener.https]
+  depends_on = [aws_lb_listener.http]
 
   tags = {
     Name = "${var.project_name}-service"

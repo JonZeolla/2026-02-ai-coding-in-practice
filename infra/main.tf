@@ -32,3 +32,7 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_caller_identity" "current" {}
+
+locals {
+  has_custom_domain = var.domain_name != "" && var.hosted_zone_id != ""
+}
