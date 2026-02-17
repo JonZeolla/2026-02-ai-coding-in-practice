@@ -117,7 +117,6 @@ export default function InterviewView({
       }
     }
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(scrollToBottom, [messages, scrollToBottom]);

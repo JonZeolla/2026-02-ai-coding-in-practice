@@ -168,7 +168,6 @@ export default function PRReviewView({ token, onComplete }: PRReviewViewProps) {
       setError('Failed to load PR data');
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, onComplete]);
 
   useEffect(() => {
@@ -185,7 +184,6 @@ export default function PRReviewView({ token, onComplete }: PRReviewViewProps) {
       loadPR();
     }
     init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLineClick = (file: string, line: number) => {
