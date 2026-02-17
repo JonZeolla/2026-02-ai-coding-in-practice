@@ -3,19 +3,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="${SCRIPT_DIR}/infra"
-CONTAINER_DIR="${SCRIPT_DIR}/hello-world-web"
+CONTAINER_DIR="${SCRIPT_DIR}/api"
 
 AWS_REGION="us-east-1"
 AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query 'Account' --output text)"
-REPO_NAME="hello-world-web"
+REPO_NAME="hiring-portal-api"
 IMAGE_TAG="latest"
 ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}"
 
-PROJECT_NAME="hello-world-web"
+PROJECT_NAME="hiring-portal-api"
 ENVIRONMENT="sandbox"
 DOMAIN_NAME="hello.the-demo-lab.com"
 HOSTED_ZONE_ID="Z04186241E78KS1NJ8TIH"
-CONTAINER_PORT="80"
+CONTAINER_PORT="3000"
 TF_VARS=(-var "project_name=${PROJECT_NAME}" -var "environment=${ENVIRONMENT}" -var "container_image=${ECR_URI}:${IMAGE_TAG}" -var "domain_name=${DOMAIN_NAME}" -var "hosted_zone_id=${HOSTED_ZONE_ID}" -var "container_port=${CONTAINER_PORT}")
 
 # Prefer terraform, fall back to tofu

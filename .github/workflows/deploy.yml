@@ -31,7 +31,7 @@ jobs:
 
       - name: Create backend config
         run: |
-          cat > infra/backend.hcl <<'EOF'
+          cat > infra/backend.hcl <<EOF
           bucket         = "${{ secrets.TF_STATE_BUCKET }}"
           region         = "us-east-1"
           dynamodb_table = "${{ secrets.TF_LOCK_TABLE }}"
