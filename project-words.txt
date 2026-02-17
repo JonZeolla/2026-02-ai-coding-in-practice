@@ -1,0 +1,12 @@
+cspell
+eslint
+hadolint
+hostnames
+lychee
+myapp
+pyproject
+ruff
+shellcheck
+tfstate
+tfvars
+tsconfig
