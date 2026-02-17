@@ -1,0 +1,186 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check for Python files
+        id: check
+        run: |
+          if find . -name '*.py' -not -path './node_modules/*' | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No Python files found, skipping lint"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.exists == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        if: steps.check.outputs.exists == 'true'
+        run: pip install ruff
+
+      - name: Ruff check
+        if: steps.check.outputs.exists == 'true'
+        run: ruff check .
+
+      - name: Ruff format check
+        if: steps.check.outputs.exists == 'true'
+        run: ruff format --check .
+
+  typescript-lint:
+    name: TypeScript Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check for TypeScript files
+        id: check
+        run: |
+          if find . -name '*.ts' -o -name '*.tsx' | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No TypeScript files found, skipping lint"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
+        with:
+          node-version: 20
+
+      - name: Install eslint
+        if: steps.check.outputs.exists == 'true'
+        run: npm install eslint @eslint/js typescript-eslint
+
+      - name: Run eslint
+        if: steps.check.outputs.exists == 'true'
+        run: npx eslint '**/*.{ts,tsx}'
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive -diff infra/
+
+      - name: Terraform init (main)
+        run: terraform -chdir=infra init -backend=false
+
+      - name: Terraform validate (main)
+        run: terraform -chdir=infra validate
+
+      - name: Terraform init (remote-state)
+        run: terraform -chdir=infra/remote-state init -backend=false
+
+      - name: Terraform validate (remote-state)
+        run: terraform -chdir=infra/remote-state validate
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run ShellCheck
+        run: shellcheck deploy.sh destroy.sh
+
+  dockerfile-lint:
+    name: Dockerfile Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: hello-world-web/Dockerfile
+
+  spell-check:
+    name: Spell Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install cspell
+        run: npm install -g cspell
+
+      - name: Run cspell
+        run: cspell lint --no-progress "**/*.{md,ts,tsx,py,yml,yaml,json,sh,tf}"
+
+  link-check:
+    name: Link Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            '**/*.md'
+          fail: true
+
+  finalizer:
+    name: Finalize
+    runs-on: ubuntu-24.04
+    needs:
+      - python-lint
+      - typescript-lint
+      - terraform-validate
+      - shellcheck
+      - dockerfile-lint
+      - spell-check
+      - link-check
+    if: always()
+    steps:
+      - name: Check for failed or cancelled jobs
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ||
+                "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required jobs failed or was cancelled."
+            exit 1
+          fi
+          echo "All jobs passed!"
