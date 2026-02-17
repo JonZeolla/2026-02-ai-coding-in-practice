@@ -44,7 +44,7 @@ RUN npm run build
 ###################################
 FROM node:20-alpine
 
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx postgresql-client
 
 # API: production dependencies + compiled output
 WORKDIR /app/api
@@ -63,6 +63,9 @@ COPY --from=ui-build /app/ui/dist /usr/share/nginx/html
 
 # Nginx configuration
 COPY nginx.unified.conf /etc/nginx/http.d/default.conf
+
+# Database schema
+COPY db/init.sql /app/db/init.sql
 
 # Entrypoint script
 WORKDIR /app

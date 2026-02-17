@@ -9,6 +9,13 @@ export POSTGRES_USER="${DB_USER:-postgres}"
 export POSTGRES_PASSWORD="${DB_PASSWORD:-postgres}"
 export POSTGRES_DB="${DB_NAME:-jobqueue}"
 
+# Run database migrations
+echo "Running database migrations..."
+export PGPASSWORD="${DB_PASSWORD:-postgres}"
+PGSSLMODE=require psql -h "${DB_HOST:-localhost}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" -d "${DB_NAME:-jobqueue}" \
+  -f /app/db/init.sql 2>&1 || echo "Warning: migration failed (tables may already exist)"
+unset PGPASSWORD
+
 # Start the worker in the background
 echo "Starting worker..."
 cd /app/worker && node dist/index.js &
