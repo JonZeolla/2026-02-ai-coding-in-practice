@@ -8,12 +8,10 @@ terraform {
     }
   }
 
+  # Configure via: terraform init -backend-config=backend.hcl
   backend "s3" {
-    bucket         = "ai-coding-in-practice-tfstate-803420623561"
-    key            = "ecs-service/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "terraform-locks"
-    encrypt        = true
+    key     = "ecs-service/terraform.tfstate"
+    encrypt = true
   }
 }
 
