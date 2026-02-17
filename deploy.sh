@@ -16,15 +16,11 @@ DOMAIN_NAME="hello.the-demo-lab.com"
 HOSTED_ZONE_ID="Z04186241E78KS1NJ8TIH"
 CONTAINER_PORT="3000"
 
-# Build environment_variables map from env vars (values default to empty string)
+# DB_PASSWORD is required for RDS; ANTHROPIC_API_KEY is optional
+DB_PASSWORD="${DB_PASSWORD:?DB_PASSWORD must be set for RDS}"
+
+# Additional env vars passed to the container (on top of auto-wired RDS/Redis endpoints)
 ENV_VARS="{"
-ENV_VARS+="\"DB_HOST\":\"${DB_HOST:-}\","
-ENV_VARS+="\"DB_PORT\":\"${DB_PORT:-5432}\","
-ENV_VARS+="\"DB_USER\":\"${DB_USER:-postgres}\","
-ENV_VARS+="\"DB_PASSWORD\":\"${DB_PASSWORD:-}\","
-ENV_VARS+="\"DB_NAME\":\"${DB_NAME:-jobqueue}\","
-ENV_VARS+="\"REDIS_HOST\":\"${REDIS_HOST:-}\","
-ENV_VARS+="\"REDIS_PORT\":\"${REDIS_PORT:-6379}\","
 ENV_VARS+="\"ANTHROPIC_API_KEY\":\"${ANTHROPIC_API_KEY:-}\""
 ENV_VARS+="}"
 
@@ -37,6 +33,7 @@ TF_VARS=(
   -var "container_port=${CONTAINER_PORT}"
   -var "cpu=1024"
   -var "memory=2048"
+  -var "db_password=${DB_PASSWORD}"
   -var "environment_variables=${ENV_VARS}"
 )
 

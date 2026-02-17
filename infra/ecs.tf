@@ -42,7 +42,7 @@ resource "aws_ecs_task_definition" "main" {
       ]
 
       environment = [
-        for key, value in var.environment_variables : {
+        for key, value in local.container_env : {
           name  = key
           value = value
         }
