@@ -2,6 +2,7 @@ import { Job } from "bullmq";
 import { Pool } from "pg";
 import { markJobRunning, markJobCompleted, markJobFailed } from "./db";
 import { handleRubricGenerate } from "./handlers/rubric";
+import { handlePrGenerate } from "./handlers/pr-generate";
 
 export interface JobData {
   jobId: string;
@@ -23,6 +24,7 @@ export type JobHandler = (
 
 const handlers: Record<string, JobHandler> = {
   "rubric.generate": handleRubricGenerate,
+  "pr.generate": handlePrGenerate,
 };
 
 export function registerHandler(type: string, handler: JobHandler): void {
