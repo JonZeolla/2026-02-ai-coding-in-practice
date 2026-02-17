@@ -1,11 +1,13 @@
 import { Job } from "bullmq";
 import { Pool } from "pg";
 import { markJobRunning, markJobCompleted, markJobFailed } from "./db";
+import { handleRubricGenerate } from "./handlers/rubric";
 
 export interface JobData {
   jobId: string;
   type: string;
   payload: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface ProcessResult {
@@ -14,49 +16,52 @@ export interface ProcessResult {
   error?: string;
 }
 
-/**
- * Simulate processing work with a configurable delay.
- * In production, this would dispatch to type-specific handlers.
- */
-export async function simulateWork(
+export type JobHandler = (
+  payload: Record<string, unknown>,
+  pool: Pool
+) => Promise<ProcessResult>;
+
+const handlers: Record<string, JobHandler> = {
+  "rubric.generate": handleRubricGenerate,
+};
+
+export function registerHandler(type: string, handler: JobHandler): void {
+  handlers[type] = handler;
+}
+
+export function getHandler(type: string): JobHandler | undefined {
+  return handlers[type];
+}
+
+async function dispatch(
   type: string,
   payload: Record<string, unknown>,
-  delayMs: number = 500
+  pool: Pool
 ): Promise<ProcessResult> {
-  await new Promise((resolve) => setTimeout(resolve, delayMs));
-
-  // Simulate failure for jobs with type "fail" or payload.shouldFail
-  if (type === "fail" || payload.shouldFail) {
+  const handler = handlers[type];
+  if (!handler) {
     return {
       success: false,
-      error: `Simulated failure for job type: ${type}`,
+      error: `No handler registered for job type: ${type}`,
     };
   }
-
-  return {
-    success: true,
-    data: {
-      processedAt: new Date().toISOString(),
-      inputType: type,
-      summary: `Processed ${type} job successfully`,
-    },
-  };
+  return handler(payload, pool);
 }
 
 /**
  * Main job processor function used by the BullMQ Worker.
- * Marks the job as running in PostgreSQL, processes it, then updates with results.
+ * Dispatches to type-specific handlers based on the job type.
  */
-export function createProcessor(pool: Pool, delayMs?: number) {
+export function createProcessor(pool: Pool) {
   return async function processJob(job: Job<JobData>): Promise<void> {
-    const { jobId, type, payload } = job.data;
+    const jobId = job.data.jobId;
+    const type = job.data.type ?? job.name;
+    const payload = job.data.payload ?? job.data;
 
     try {
-      // Mark as running in PostgreSQL
       await markJobRunning(pool, jobId);
 
-      // Process the job
-      const result = await simulateWork(type, payload, delayMs);
+      const result = await dispatch(type, payload, pool);
 
       if (result.success) {
         await markJobCompleted(pool, jobId, result.data!);
