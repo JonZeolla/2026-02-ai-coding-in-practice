@@ -1,7 +1,9 @@
+bullmq
 cspell
 eslint
 hadolint
 hostnames
+jobqueue
 lychee
 myapp
 pyproject
@@ -9,4 +11,6 @@ ruff
 shellcheck
 tfstate
 tfvars
+tokenvalue
 tsconfig
+uuidv
