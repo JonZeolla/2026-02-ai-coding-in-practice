@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { markJobRunning, markJobCompleted, markJobFailed, getJob } from "../db";
 
 describe("database operations", () => {
-  let mockPool: any;
+  let mockPool: { query: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockPool = {
