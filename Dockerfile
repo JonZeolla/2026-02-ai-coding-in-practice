@@ -44,7 +44,7 @@ RUN npm run build
 ###################################
 FROM node:20-alpine
 
-RUN apk add --no-cache nginx postgresql-client
+RUN apk add --no-cache nginx=1.28.2-r0 postgresql-client
 
 # API: production dependencies + compiled output
 WORKDIR /app/api
