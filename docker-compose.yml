@@ -28,33 +28,16 @@ services:
       timeout: 3s
       retries: 5
 
-  api:
-    build: ./api
+  app:
+    build: .
     ports:
       - "3000:3000"
     environment:
-      PORT: "3000"
       DB_HOST: db
       DB_PORT: "5432"
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_NAME: jobqueue
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  worker:
-    build: ./worker
-    environment:
-      POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: jobqueue
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
@@ -63,13 +46,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-
-  ui:
-    build: ./ui
-    ports:
-      - "8080:80"
-    depends_on:
-      - api
 
 volumes:
   pgdata:

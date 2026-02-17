@@ -64,6 +64,34 @@ output "ecr_repository_url" {
 }
 
 ############################
+# Database (RDS)
+############################
+
+output "rds_endpoint" {
+  description = "RDS PostgreSQL endpoint (host:port)"
+  value       = aws_db_instance.main.endpoint
+}
+
+output "rds_address" {
+  description = "RDS PostgreSQL hostname"
+  value       = aws_db_instance.main.address
+}
+
+############################
+# Cache (ElastiCache)
+############################
+
+output "redis_endpoint" {
+  description = "ElastiCache Redis endpoint address"
+  value       = aws_elasticache_cluster.main.cache_nodes[0].address
+}
+
+output "redis_port" {
+  description = "ElastiCache Redis port"
+  value       = aws_elasticache_cluster.main.cache_nodes[0].port
+}
+
+############################
 # Logging
 ############################
 

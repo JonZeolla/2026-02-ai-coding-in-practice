@@ -90,6 +90,28 @@ variable "environment_variables" {
 }
 
 ############################
+# Database (RDS)
+############################
+
+variable "db_name" {
+  description = "Name of the PostgreSQL database"
+  type        = string
+  default     = "jobqueue"
+}
+
+variable "db_username" {
+  description = "Master username for RDS"
+  type        = string
+  default     = "postgres"
+}
+
+variable "db_password" {
+  description = "Master password for RDS (sensitive)"
+  type        = string
+  sensitive   = true
+}
+
+############################
 # DNS / TLS (optional)
 ############################
 
