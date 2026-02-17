@@ -1,3 +1,6 @@
 .runtime/
-.claude/commands/
+.claude/
+.beads/
 .logs/
+node_modules/
+dist/
