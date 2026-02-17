@@ -3,20 +3,42 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="${SCRIPT_DIR}/infra"
-CONTAINER_DIR="${SCRIPT_DIR}/api"
 
 AWS_REGION="us-east-1"
 AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query 'Account' --output text)"
-REPO_NAME="hiring-portal-api"
+REPO_NAME="hiring-portal"
 IMAGE_TAG="latest"
 ECR_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}"
 
-PROJECT_NAME="hiring-portal-api"
+PROJECT_NAME="hiring-portal"
 ENVIRONMENT="sandbox"
 DOMAIN_NAME="hello.the-demo-lab.com"
 HOSTED_ZONE_ID="Z04186241E78KS1NJ8TIH"
 CONTAINER_PORT="3000"
-TF_VARS=(-var "project_name=${PROJECT_NAME}" -var "environment=${ENVIRONMENT}" -var "container_image=${ECR_URI}:${IMAGE_TAG}" -var "domain_name=${DOMAIN_NAME}" -var "hosted_zone_id=${HOSTED_ZONE_ID}" -var "container_port=${CONTAINER_PORT}")
+
+# Build environment_variables map from env vars (values default to empty string)
+ENV_VARS="{"
+ENV_VARS+="\"DB_HOST\":\"${DB_HOST:-}\","
+ENV_VARS+="\"DB_PORT\":\"${DB_PORT:-5432}\","
+ENV_VARS+="\"DB_USER\":\"${DB_USER:-postgres}\","
+ENV_VARS+="\"DB_PASSWORD\":\"${DB_PASSWORD:-}\","
+ENV_VARS+="\"DB_NAME\":\"${DB_NAME:-jobqueue}\","
+ENV_VARS+="\"REDIS_HOST\":\"${REDIS_HOST:-}\","
+ENV_VARS+="\"REDIS_PORT\":\"${REDIS_PORT:-6379}\","
+ENV_VARS+="\"ANTHROPIC_API_KEY\":\"${ANTHROPIC_API_KEY:-}\""
+ENV_VARS+="}"
+
+TF_VARS=(
+  -var "project_name=${PROJECT_NAME}"
+  -var "environment=${ENVIRONMENT}"
+  -var "container_image=${ECR_URI}:${IMAGE_TAG}"
+  -var "domain_name=${DOMAIN_NAME}"
+  -var "hosted_zone_id=${HOSTED_ZONE_ID}"
+  -var "container_port=${CONTAINER_PORT}"
+  -var "cpu=1024"
+  -var "memory=2048"
+  -var "environment_variables=${ENV_VARS}"
+)
 
 # Prefer terraform, fall back to tofu
 if command -v terraform &>/dev/null; then
@@ -48,12 +70,8 @@ aws ecr get-login-password --region "${AWS_REGION}" |
   docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 echo ""
-echo "==> Step 4: Build and push container image"
-if [ ! -d "${CONTAINER_DIR}" ]; then
-  echo "Error: ${CONTAINER_DIR} not found." >&2
-  exit 1
-fi
-cd "${CONTAINER_DIR}"
+echo "==> Step 4: Build and push unified container image"
+cd "${SCRIPT_DIR}"
 docker build --platform linux/amd64 -t "${REPO_NAME}:${IMAGE_TAG}" .
 docker tag "${REPO_NAME}:${IMAGE_TAG}" "${ECR_URI}:${IMAGE_TAG}"
 docker push "${ECR_URI}:${IMAGE_TAG}"

@@ -18,3 +18,4 @@ tfvars
 tokenvalue
 tsconfig
 uuidv
+vite

@@ -75,3 +75,23 @@ resource "aws_security_group_rule" "ecs_egress_https" {
   security_group_id = aws_security_group.ecs.id
   description       = "Allow outbound HTTPS (AWS APIs, ECR, etc.)"
 }
+
+resource "aws_security_group_rule" "ecs_egress_postgres" {
+  type              = "egress"
+  from_port         = 5432
+  to_port           = 5432
+  protocol          = "tcp"
+  cidr_blocks       = [var.vpc_cidr]
+  security_group_id = aws_security_group.ecs.id
+  description       = "Allow outbound PostgreSQL to VPC (RDS)"
+}
+
+resource "aws_security_group_rule" "ecs_egress_redis" {
+  type              = "egress"
+  from_port         = 6379
+  to_port           = 6379
+  protocol          = "tcp"
+  cidr_blocks       = [var.vpc_cidr]
+  security_group_id = aws_security_group.ecs.id
+  description       = "Allow outbound Redis to VPC (ElastiCache)"
+}
